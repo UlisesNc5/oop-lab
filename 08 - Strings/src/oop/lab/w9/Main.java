@@ -2,9 +2,24 @@ package oop.lab.w9;
 
 import java.util.Scanner;
 
-abstract class Correct{
-    abstract boolean correct();
-    String message;
+interface Checker{
+    boolean check();
+}
+
+interface Getter<T>{
+    T get();
+}
+
+class Run<T>{
+    T run(Checker checker, Getter<T> getter, String message){
+        T val;
+        do {
+            System.out.print(message);
+            val = getter.get();
+        }
+        while(!checker.check());
+        return val;
+    }
 }
 
 public class Main {
@@ -12,6 +27,9 @@ public class Main {
     static String[] strArr;
     static char[] charArr;
     static char c;
+    static Run<Integer> rInt = new Run<>();
+    static Run<Character> rChr = new Run<>();
+
     public static void main(String[] args) {
         scanner = new Scanner(System.in);
         strArr = new String[5];
@@ -20,34 +38,20 @@ public class Main {
 
         do {
             System.out.println(
-                "Seleccione una opcion del menu:" +
-                "1. Crear una sublista de strings" + 
-                "2. Checar tipo de caracteres de una lista" + 
-                "3. Convertir a minuscula o mayuscula" + 
-                "4. Checar elementos de una lista de strings que comienzan con un caracter" + 
-                "5. Checar elementos de una lista de strings que terminan con un caracter" + 
+                "Seleccione una opcion del menu:\n" +
+                "1. Crear una sublista de strings\n" + 
+                "2. Checar tipo de caracteres de una lista\n" + 
+                "3. Convertir a minuscula o mayuscula\n" + 
+                "4. Checar elementos de una lista de strings que comienzan con un caracter\n" + 
+                "5. Checar elementos de una lista de strings que terminan con un caracter\n" + 
                 "6. Terminar el programa"            
             );
             option = scanner.nextInt();
-            switch(option){
-                case 1:
-                    opt1();
-                    break;
-                case 2:
-                    opt2();
-                    break;
-                case 3:
-                    opt3();
-                    break;
-                case 4: 
-                    opt4();
-                    break;
-                case 5: 
-                    opt5();
-                    break;
-                case 6:
-                    System.out.println("Gracias por usar el programa");
-                    break;
+            try{
+                Main.class.getMethod("opt" + option).invoke(null);
+            }
+            catch(Exception e){
+                System.out.println("Opcion no valida");
             }
         } while(option != 6);
 
@@ -64,51 +68,42 @@ public class Main {
     public static void fillCharArr(){
         System.out.println("Introduzca 5 caracteres");
         for (int i = 0; i < 5; i++) {
-            strArr[i] = scanner.nextLine();
+            charArr[i] = scanner.next().toCharArray()[0];
         }
     }
 
+    static int beg = 0, end = 0;
     public static void opt1(){
         fillStrArr();
-        int beg, end;
-        do {
-            System.out.println("Introduzca el indice (0-4) de donde empezar");
-            beg = scanner.nextInt();
-        } while (beg < 0 || beg > 4);
-        do {
-            System.out.println("Introduzca el indice (0-4) en donde terminar");
-            end = scanner.nextInt();
-        } while (end < 0 || end > 4);
+        beg = rInt.run(() -> {return beg >= 0 && beg <= 3;}, () -> {return scanner.nextInt();}, "Introduzca el indice (0-4) de donde empezar");
+        end = rInt.run(() -> {return end > beg && end <= 4;}, () -> {return scanner.nextInt();}, "Introduzca el indice (" + beg + "-4) de donde terminar");
 
-        for (int i = 0; i < 5; i++) {
-            for(int j = beg; j <= end; j++){
-                System.out.print(strArr[i].charAt(j));
-            }
+        for (String str : strArr) {
+            int top = end < str.length() ? end : str.length();
+            for(int j = beg; j <= top ; j++)
+                System.out.print(str.charAt(j));
             System.out.println();
         }
     }
 
+    static String[] types = {"letra", "digito", "espacio", "otro"};
+    static int bool(boolean b){
+        return b ? 1 : 0;
+    }
+
     public static void opt2() {
         fillCharArr();
-        for (int i = 0; i < charArr.length; i++) {
-            if (Character.isLetter(charArr[i])) {
-                System.out.println(charArr[i] + " es una letra");
-            } else if (Character.isDigit(charArr[i])) {
-                System.out.println(charArr[i] + " es un numero");
-            } else if (Character.isWhitespace(charArr[i])) {
-                System.out.println(charArr[i] + " es un espacio");
-            } else {
-                System.out.println(charArr[i] + " es otro caracter");
-            }
+        for(char c : charArr){
+            int type = bool(Character.isLetter(c)) * 1 + bool(Character.isDigit(c)) * 2 + bool(Character.isSpaceChar(c)) * 3;
+            type = type == 0 ? 3 : type - 1;
+            System.out.println(c + " es un " + types[type]);
         }
     }
 
     public static void opt3() {
         fillCharArr();
         System.out.println("m para minuscula, M para mayuscula");
-        do {
-            c = scanner.next().charAt(0);
-        } while (c != 'm' && c != 'M');
+        c = rChr.run(() -> {return c == 'm' || c == 'M';}, () -> {return scanner.next().charAt(0);}, "Introduzca un caracter"); 
 
         for (int i = 0; i < charArr.length; i++) {
             charArr[i] = (c == 'm') ?  Character.toLowerCase(charArr[i]) : Character.toUpperCase(charArr[i]);
@@ -121,22 +116,21 @@ public class Main {
         fillStrArr();
         c = scanner.next().charAt(0);
 
-        for (String str : strArr) {
-            if (str.charAt(0) == c) {
+        for (String str : strArr)
+            if (str.charAt(0) == c)
                 System.out.println(str);
-            }
-        }
     }
 
     public static void opt5() {
         fillStrArr();
         c = scanner.next().charAt(0);
 
-        for (String str : strArr) {
-            int len = str.length();
-            if (str.charAt(len) == c) {
+        for (String str : strArr)
+            if (str.charAt(str.length()) == c)
                 System.out.println(str);
-            }
-        }
+    }
+
+    public static void opt6() {
+        System.out.println("Fin del programa");
     }
 }
